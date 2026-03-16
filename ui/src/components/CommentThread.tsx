@@ -127,9 +127,7 @@ const TimelineList = memo(function TimelineList({
   highlightCommentId?: string | null;
   onEdit?: (commentId: string, body: string) => Promise<void>;
 }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editBody, setEditBody] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [editState, setEditState] = useState<{ id: string; body: string; saving: boolean } | null>(null);
   if (timeline.length === 0) {
     return <p className="text-sm text-muted-foreground">No comments or runs yet.</p>;
   }
@@ -169,7 +167,7 @@ const TimelineList = memo(function TimelineList({
         const comment = item.comment;
         const isHighlighted = highlightCommentId === comment.id;
         const isUserComment = !comment.authorAgentId;
-        const isEditing = editingId === comment.id;
+        const isEditing = editState?.id === comment.id;
         return (
           <div
             key={comment.id}
@@ -200,8 +198,7 @@ const TimelineList = memo(function TimelineList({
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     title="Edit comment"
                     onClick={() => {
-                      setEditingId(comment.id);
-                      setEditBody(comment.body);
+                      setEditState({ id: comment.id, body: comment.body, saving: false });
                     }}
                   >
                     <Pencil className="h-3 w-3" />
@@ -214,35 +211,35 @@ const TimelineList = memo(function TimelineList({
               <div className="space-y-2">
                 <textarea
                   className="w-full min-h-[60px] rounded-sm border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-y"
-                  value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
-                  disabled={saving}
+                  value={editState?.body ?? ""}
+                  onChange={(e) => setEditState((s) => s ? { ...s, body: e.target.value } : s)}
+                  disabled={editState?.saving}
                 />
                 <div className="flex items-center gap-2 justify-end">
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={saving}
-                    onClick={() => setEditingId(null)}
+                    disabled={editState?.saving}
+                    onClick={() => setEditState(null)}
                   >
                     <X className="h-3 w-3 mr-1" />
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    disabled={saving || !editBody.trim()}
+                    disabled={editState?.saving || !editState?.body.trim()}
                     onClick={async () => {
-                      if (!onEdit || !editBody.trim()) return;
-                      setSaving(true);
+                      if (!onEdit || !editState?.body.trim()) return;
+                      setEditState((s) => s ? { ...s, saving: true } : s);
                       try {
-                        await onEdit(comment.id, editBody.trim());
-                        setEditingId(null);
+                        await onEdit(comment.id, editState.body.trim());
+                        setEditState(null);
                       } finally {
-                        setSaving(false);
+                        setEditState((s) => s ? { ...s, saving: false } : s);
                       }
                     }}
                   >
-                    {saving ? "Saving..." : "Save"}
+                    {editState?.saving ? "Saving..." : "Save"}
                   </Button>
                 </div>
               </div>

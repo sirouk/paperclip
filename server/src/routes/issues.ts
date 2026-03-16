@@ -938,7 +938,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
 
     // Guard: if the issue is assigned to a different agent, block edits that
     // could change @-mentions (effectively reassigning work mid-flight).
-    if (issue.assigneeAgentId && issue.assigneeAgentId !== (actor.agentId ?? null)) {
+    if (actor.actorType === "agent" && issue.assigneeAgentId && issue.assigneeAgentId !== actor.agentId) {
       res.status(403).json({ error: "Cannot edit comments on issues assigned to another agent" });
       return;
     }
@@ -967,7 +967,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
     void (async () => {
       try {
         const oldMentions = await svc.findMentionedAgents(issue.companyId, oldBody);
-        const newMentions = await svc.findMentionedAgents(issue.companyId, req.body.body);
+        const newMentions = await svc.findMentionedAgents(issue.companyId, updated.body);
         const addedMentions = newMentions.filter((m) => !oldMentions.includes(m));
 
         for (const mentionedId of addedMentions) {
